@@ -1,9 +1,9 @@
-# 基于Cursor的零-shot开发聊天应用
+# Zero-shot Development of Chat Application Based on Cursor
 
-## 关于我
-我是一名算法工程师，精通算法，但对前后端开发知之甚少。本项目是基于Cursor的零-shot开发聊天应用，利用Cursor的AI能力，快速构建一个聊天应用。在整个过程中，我通过Cursor的COMPOSER代理功能与其对话，描述我的想法，Cursor则自动生成代码并运行。我观察效果，如果不满意，再次与Cursor沟通，直到达到我的期望。
+## About Me
+I am an algorithm engineer proficient in algorithms but have little knowledge of front-end and back-end development. This project is a zero-shot development chat application based on Cursor, utilizing Cursor's AI capabilities to quickly build a chat application. Throughout the process, I communicated with Cursor's COMPOSER agent, describing my ideas, and Cursor automatically generated and ran the code. I observed the results, and if unsatisfied, I communicated with Cursor again until my expectations were met.
 
-## 项目结构
+## Project Structure
 ```
 - AiChat/
   - frontend/
@@ -16,7 +16,7 @@
   - start.py
 ```
 
-## 安装
+## Installation
 ```
 conda create -n aichat python=3.12
 conda activate aichat
@@ -25,46 +25,46 @@ cd AiChat/backend
 pip install -r requirements.txt
 ```
 
-### 修改
-1. 修改**backend/main.py**中的```openai_api_key```和```openai_model_name```
+### Modification
+1. Modify `openai_api_key` and `openai_model_name` in **backend/main.py**
 
-## 运行
+## Running
 ```
 python start.py
 
-后端地址: http://localhost:8000
-前端地址: http://localhost:5173
+Backend URL: http://localhost:8000
+Frontend URL: http://localhost:5173
 ```
 
-## 效果
-1. 登录
+## Results
+1. Login
 
 <img src="./images/login.png" alt="login" style="zoom:50%;" />
 
-2. 群聊
+2. Group Chat
 
 <img src="./images/groupchat.png" alt="groupchat" style="zoom:80%;" />
 
-3. 私聊
+3. Private Chat
 
 <img src="./images/privatechat.png" alt="privatechat" style="zoom:80%;" />
 
-## 总结
-当前，大语言模型在Code Copilot领域的应用已经成为最为广泛的实践之一，例如Cursor、Windsurf、Cline、GitHub Copilot、MarsCoder等。其中，Cursor无疑是最为人所知的产品，因此出于好奇，我决定使用它来开发这个项目。坦白说，Composer代理的项目管理能力在使用过程中令我感到惊艳。我只需描述我的想法，而无需亲自编写代码（实际上，我并不擅长前端开发）。它能够自动创建文件夹、生成文件、填充代码、定位代码段、修改代码、审核代码，并同时管理多个文件的代码块。在终端中，它自动填充命令并启动服务，我只需打开浏览器，便能看到最终效果。
+## Summary
+Currently, the application of large language models in the Code Copilot field has become one of the most widely practiced areas, such as Cursor, Windsurf, Cline, GitHub Copilot, MarsCoder, etc. Among them, Cursor is undoubtedly the most well-known product, so out of curiosity, I decided to use it to develop this project. Frankly, the project management capabilities of the Composer agent amazed me during use. I only needed to describe my ideas without writing the code myself (in fact, I am not good at front-end development). It can automatically create folders, generate files, fill in code, locate code segments, modify code, review code, and manage code blocks in multiple files simultaneously. In the terminal, it automatically fills in commands and starts services, and I only need to open the browser to see the final effect.
 
-**以下几点细节让我印象深刻：**
-1. 起初，我要求使用TypeScript，但在安装npm相关依赖时遇到了错误，经过多次修改仍无法继续执行。于是我请求它转换为Python，它便顺利完成了转换。然而，启动时仍有一些不再使用的项目文件。我告诉它列出当前所有需要的文件，并删除那些不必要的，它便自动执行了。
-2. 在项目中，我希望消息支持Markdown格式，因此我从其他聊天应用中截取了需要的小组件的截图，并上传给它。它几乎按照图片完成了所有组件的设计，并支持图片显示、代码块渲染等功能。
-3. 我想接入一个AI聊天助手，告诉它我希望使用OpenAI的接口，它便帮助我完成了这一工作。我只需填写OpenAI的API密钥和模型名称，刷新网页后便能成功与AI聊天助手对话。
-4. 此外，它还为我添加了群聊@功能、消息换行功能、群聊公告修改、群聊名称和个人信息的编辑等功能。
-5. 支持历史消息存档和AI多轮会话。
+**The following details impressed me:**
+1. Initially, I requested to use TypeScript, but encountered errors when installing npm-related dependencies. After multiple modifications, it still couldn't proceed. So I asked it to convert to Python, and it completed the conversion smoothly. However, there were still some unused project files at startup. I asked it to list all the current required files and delete the unnecessary ones, and it executed automatically.
+2. In the project, I wanted the messages to support Markdown format, so I took screenshots of the required small components from other chat applications and uploaded them. It almost completed the design of all components according to the pictures, supporting image display, code block rendering, and other functions.
+3. I wanted to integrate an AI chat assistant and told it I wanted to use OpenAI's interface, and it helped me complete this task. I only needed to fill in the OpenAI API key and model name, and after refreshing the page, I could successfully chat with the AI assistant.
+4. Additionally, it added group chat @ function, message line break function, group chat announcement modification, group chat name and personal information editing, and other functions for me.
+5. Supports historical message archiving and AI multi-round conversation.
 6. ...
 
-**当然，也有一些不足之处：**
-1. 我要求修改个人信息面板时，它会连同登录信息一起修改，经过多次尝试仍未能解决。
-2. 我希望添加代码块的语言描述和复制功能，但修改后无法成功发送包含代码的消息，经过多次尝试只好选择回退。
-3. 我希望实现多位置用户头像的同步，但在刷新后重新登录时，头像会出现不一致的问题。
-4. 我想添加一个用户数据库，开始删除之前创建的一些功能，但多次尝试未能成功创建。
+**Of course, there are also some shortcomings:**
+1. When I asked to modify the personal information panel, it would modify the login information together, and after multiple attempts, it still couldn't be resolved.
+2. I wanted to add language description and copy function for code blocks, but after modification, I couldn't successfully send messages containing code, and after multiple attempts, I had to choose to roll back.
+3. I wanted to achieve synchronization of user avatars in multiple locations, but after refreshing and re-logging in, the avatars would appear inconsistent.
+4. I wanted to add a user database, started deleting some previously created functions, but after multiple attempts, I couldn't successfully create it.
 5. ...
 
-最后，我想说，这确实是一次非常有趣的体验。由于我的账号已用尽所有Premium模型的使用额度，迭代也因此停止。如果大家对此项目感兴趣，欢迎继续完善它。
+Finally, I want to say that this was indeed a very interesting experience. Since my account has exhausted all the usage quota of the Premium model, the iteration has also stopped. If you are interested in this project, feel free to continue improving it.
