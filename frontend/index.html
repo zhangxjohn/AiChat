@@ -1,0 +1,1948 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LuD Chat</title>
+    <!-- Custom CSS -->
+    <link href="styles.css" rel="stylesheet">
+    <!-- 引入图标库 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <!-- Markdown 相关库 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@2.3.3/dist/purify.min.js"></script>
+    <!-- GitHub Markdown 样式 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+    <!-- 添加 highlight.js 的暗色主题 CSS 和 JS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        /* 添加自定义 Markdown 样式 */
+        .markdown-body {
+            background-color: transparent !important;
+            color: inherit !important;
+        }
+        .markdown-body p {
+            margin: 0 !important;
+        }
+        .markdown-body img {
+            max-width: 100%;
+            border-radius: 4px;
+        }
+        .markdown-body code {
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .markdown-body pre code {
+            background-color: #f6f8fa;
+            display: block;
+            padding: 1em;
+            overflow-x: auto;
+        }
+        /* 代码块样式 */
+        .markdown-body pre {
+            background-color: #0d1117 !important;  /* GitHub Dark 主题的背景色 */
+            border-radius: 6px !important;
+            margin: 8px 0 !important;
+            padding: 12px !important;
+            overflow-x: auto !important;
+            border: 1px solid #30363d !important;  /* 添加边框 */
+        }
+
+        .markdown-body pre code {
+            background: none !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace !important;
+            font-size: 13px !important;
+            line-height: 1.45 !important;
+            white-space: pre !important;
+            color: #e6edf3 !important;  /* 代码文本颜色 */
+        }
+
+        /* 行内代码样式 */
+        .markdown-body code {
+            background-color: rgba(110, 118, 129, 0.4) !important;  /* 深色背景 */
+            border-radius: 4px !important;
+            padding: 0.2em 0.4em !important;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace !important;
+            font-size: 85% !important;
+            color: #e6edf3 !important;  /* 行内代码文本颜色 */
+        }
+
+        /* 确保代码块在气泡中正确显示 */
+        .message-content pre {
+            max-width: 100% !important;
+            margin: 8px 0 !important;
+        }
+
+        /* 调整代码块中的滚动条样式 */
+        .markdown-body pre::-webkit-scrollbar {
+            height: 8px !important;
+        }
+
+        .markdown-body pre::-webkit-scrollbar-thumb {
+            background-color: #30363d !important;  /* 深色滚动条 */
+            border-radius: 4px !important;
+        }
+
+        .markdown-body pre::-webkit-scrollbar-track {
+            background-color: #0d1117 !important;  /* 与代码块背景色相同 */
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 用户名输入模态框 -->
+        <div id="username-modal" class="modal">
+            <div class="modal-content">
+                <h1>在线协作</h1>
+                <div class="subtitle">永久免费</div>
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <input type="text" id="username-input" placeholder="输入用户名" maxlength="20">
+                    </div>
+                    <button onclick="joinChat()" id="join-button">加入聊天</button>
+                </div>
+                <div id="connection-status"></div>
+            </div>
+        </div>
+
+        <!-- 聊天界面 -->
+        <div id="chat-container" style="display: none;">
+            <!-- 左侧通讯录 -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <div class="current-user">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=default" alt="avatar" class="avatar">
+                        <div class="user-info">
+                            <span class="username"></span>
+                            <span class="status-text"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="search-box">
+                    <div class="search-input-wrapper">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="contact-search" placeholder="搜索" oninput="filterContacts()">
+                    </div>
+                </div>
+                <div class="contact-tabs">
+                    <button class="tab-btn active" onclick="switchTab('chats')">
+                        <i class="bi bi-chat-dots-fill"></i>
+                        <span>聊天</span>
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('contacts')">
+                        <i class="bi bi-person-lines-fill"></i>
+                        <span>联系人</span>
+                    </button>
+                </div>
+                <div class="member-list">
+                    <!-- 聊天列表 -->
+                    <div id="chats-tab" class="tab-content active">
+                        <!-- 群聊列表 -->
+                        <div class="list-section">
+                            <div class="list-header">
+                                <i class="bi bi-people-fill"></i>
+                                <span>群聊</span>
+                                <span class="group-count"></span>
+                            </div>
+                            <ul id="groups">
+                                <li class="member-item active" onclick="backToGroupChat()">
+                                    <img src="https://api.dicebear.com/7.x/initials/svg?seed=LuD" alt="在线协作群" class="member-avatar">
+                                    <div class="member-info">
+                                        <span class="member-name">在线协作群</span>
+                                        <div class="member-details">
+                                            <span class="member-status">永久免费</span>
+                                            <span class="online-time"></span>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <!-- 最近聊天列表 -->
+                        <div class="list-section">
+                            <div class="list-header">
+                                <i class="bi bi-clock-history"></i>
+                                <span>最近聊天</span>
+                            </div>
+                            <ul id="recent-chats"></ul>
+                        </div>
+                    </div>
+
+                    <!-- 联系人列表 -->
+                    <div id="contacts-tab" class="tab-content" style="display: none;">
+                        <!-- 我的信息 -->
+                        <div class="list-section">
+                            <div class="list-header">
+                                <i class="bi bi-person-circle"></i>
+                                <span>我的信息</span>
+                            </div>
+                            <ul>
+                                <li class="member-item" onclick="openProfileModal()">
+                                    <img id="my-avatar" src="" alt="" class="member-avatar">
+                                    <div class="member-info">
+                                        <span id="my-username" class="member-name"></span>
+                                        <div class="member-details">
+                                            <span id="my-status" class="member-status">点击编辑个人信息</span>
+                                        </div>
+                                    </div>
+                                    <i class="bi bi-pencil-square edit-icon"></i>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- 在线用户列表 -->
+                        <div class="list-section">
+                            <div class="list-header">
+                                <i class="bi bi-person-fill"></i>
+                                <span>在线联系人</span>
+                                <span class="member-count"></span>
+                            </div>
+                            <ul id="users"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中间聊天区域 -->
+            <div class="chat-area">
+                <div class="chat-header">
+                    <div class="chat-title">
+                        <span>在线协作群</span>
+                        <span class="online-count"></span>
+                    </div>
+                </div>
+                <div id="messages" class="message-list"></div>
+                <div class="message-input-container">
+                    <div class="message-toolbar">
+                        <div class="toolbar-left">
+                            <button onclick="insertMarkdown('**', '**')" title="粗体"><i class="bi bi-type-bold"></i></button>
+                            <button onclick="insertMarkdown('*', '*')" title="斜体"><i class="bi bi-type-italic"></i></button>
+                            <button onclick="insertMarkdown('~~', '~~')" title="删除线"><i class="bi bi-type-strikethrough"></i></button>
+                            <button onclick="insertMarkdown('[', '](url)')" title="链接"><i class="bi bi-link-45deg"></i></button>
+                            <button onclick="insertMarkdown('- ', '')" title="无序列表"><i class="bi bi-list-ul"></i></button>
+                            <button onclick="insertMarkdown('1. ', '')" title="有序列表"><i class="bi bi-list-ol"></i></button>
+                            <button onclick="insertMarkdown('> ', '')" title="引用"><i class="bi bi-chat-square-quote"></i></button>
+                            <button onclick="insertMarkdown('```\n', '\n```')" title="代码块"><i class="bi bi-code-slash"></i></button>
+                            <button onclick="openImageUpload()" title="插入图片" class="image-upload-btn">
+                                <i class="bi bi-image"></i>
+                            </button>
+                            <input type="file" id="image-upload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                        </div>
+                    </div>
+                    <div class="editor-container">
+                        <textarea id="message-input" class="message-input" placeholder="输入消息..."></textarea>
+                    </div>
+                    <div class="message-footer">
+                        <div class="footer-left">
+                            <button onclick="openMentionPanel()" title="提及用户" class="toolbar-btn">
+                                <i class="bi bi-at"></i>
+                            </button>
+                            <button onclick="toggleEmojiPicker()" title="表情" class="toolbar-btn">
+                                <i class="bi bi-emoji-smile"></i>
+                            </button>
+                            <button onclick="startVoiceMessage()" title="语音" class="toolbar-btn">
+                                <i class="bi bi-mic"></i>
+                            </button>
+                        </div>
+                        <div class="footer-right">
+                            <button onclick="insertNewline()" title="换行" class="toolbar-btn">
+                                <i class="bi bi-arrow-return-left"></i>
+                            </button>
+                            <button class="send-btn" onclick="sendMessage()">
+                                <i class="bi bi-send"></i>
+                                发送
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧信息面板 -->
+            <div class="info-panel">
+                <div class="panel-header">
+                    <h3>群聊信息</h3>
+                </div>
+                <div class="panel-content">
+                    <div class="announcement">
+                        <h4>
+                            <i class="bi bi-megaphone"></i> 群公告
+                            <button onclick="openAnnouncementEditor()" class="edit-btn">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </h4>
+                        <div class="announcement-content">
+                            欢迎加入在线协作群！这里是一个开放的交流空间，请大家友善交流。
+                        </div>
+                    </div>
+                    <div class="group-info">
+                        <h4>
+                            <i class="bi bi-info-circle"></i> 基本信息
+                            <button onclick="openGroupSettingsEditor()" class="edit-btn">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </h4>
+                        <div class="info-item">
+                            <span>群名称：</span>
+                            <span id="group-name">在线协作群</span>
+                        </div>
+                        <div class="info-item">
+                            <span>创建时间：</span>
+                            <span>2024-12-20</span>
+                        </div>
+                        <div class="info-item member-count">
+                            <span>成员数：</span>
+                            <span class="count">0</span>
+                        </div>
+                    </div>
+                    <div class="online-members">
+                        <h4><i class="bi bi-person-check"></i> 在线成员</h4>
+                        <div class="member-grid" id="online-members-grid"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 添加群设置编辑模态框 -->
+            <div id="group-settings-editor" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <h2>群聊设置</h2>
+                    <div class="input-group">
+                        <label for="group-name-input">群名</label>
+                        <input type="text" id="group-name-input" maxlength="20" placeholder="输入群名称">
+                    </div>
+                    <div class="button-group">
+                        <button onclick="saveGroupSettings()" class="save-btn">保存</button>
+                        <button onclick="closeGroupSettingsEditor()" class="cancel-btn">取消</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加个人信息编辑模态框 -->
+        <div id="profile-modal" class="modal" style="display: none;">
+            <div class="modal-content profile-modal-content">
+                <h2>个人信息���置</h2>
+                <div class="profile-form">
+                    <div class="profile-avatar-section">
+                        <img id="current-avatar" class="profile-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=default" alt="头像">
+                        <button class="change-avatar-btn" onclick="changeAvatar()">更换头像</button>
+                    </div>
+                    <div class="input-group">
+                        <label for="profile-username">用户名</label>
+                        <input type="text" id="profile-username" placeholder="输入新的用户名">
+                    </div>
+                    <div class="input-group">
+                        <label for="profile-status">个性签名</label>
+                        <input type="text" id="profile-status" placeholder="设置你的个性签名">
+                    </div>
+                    <div class="profile-buttons">
+                        <button onclick="saveProfile()" class="save-btn">保存</button>
+                        <button onclick="closeProfileModal()" class="cancel-btn">取消</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加表情选择器面板 -->
+        <div id="emoji-picker" class="emoji-picker" style="display: none;">
+            <div class="emoji-categories">
+                <button class="active" onclick="switchEmojiCategory('recent')">最近</button>
+                <button onclick="switchEmojiCategory('smileys')">表情</button>
+                <button onclick="switchEmojiCategory('animals')">动物</button>
+                <button onclick="switchEmojiCategory('food')">食物</button>
+                <button onclick="switchEmojiCategory('activities')">活动</button>
+                <button onclick="switchEmojiCategory('objects')">物品</button>
+            </div>
+            <div class="emoji-list" id="emoji-list"></div>
+        </div>
+
+        <!-- 添加消息搜索面板 -->
+        <div id="message-search-panel" class="message-search-panel" style="display: none;">
+            <div class="search-header">
+                <div class="search-input-wrapper">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="message-search-input" placeholder="搜索消息..." oninput="searchMessages()">
+                </div>
+                <button class="close-btn" onclick="closeMessageSearch()">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+            <div class="search-results" id="message-search-results"></div>
+        </div>
+
+        <!-- 添加群公告编辑面板 -->
+        <div id="announcement-editor" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h2>编辑群公告</h2>
+                <textarea id="announcement-text" rows="5" placeholder="输入群公告内容..."></textarea>
+                <div class="button-group">
+                    <button onclick="saveAnnouncement()">保存</button>
+                    <button onclick="closeAnnouncementEditor()" class="cancel-btn">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let currentUsername = '';
+        let reconnectAttempts = 0;
+        const MAX_RECONNECT_ATTEMPTS = 3;
+        const RECONNECT_DELAY = 2000; // 2秒
+        const statusDiv = document.getElementById('connection-status');
+        const joinButton = document.getElementById('join-button');
+        const bot = { name: '小助手' };  // 添加 bot 对象
+
+        // 获取WebSocket服务器地址
+        function getWebSocketUrl(username) {
+            const encodedUsername = encodeURIComponent(username);
+            return `ws://localhost:8000/ws/${encodedUsername}`;
+        }
+
+        function updateStatus(message, isError = false) {
+            statusDiv.textContent = message;
+            statusDiv.style.color = isError ? '#ff4444' : '#888';
+            console.log(message);
+        }
+
+        async function checkServerHealth() {
+            try {
+                console.log('正在检查服务器状态...');
+                const healthUrl = 'http://localhost:8000/health';
+                const response = await fetch(healthUrl, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    console.error('服务器状态检查失败:', response.status);
+                    return false;
+                }
+                
+                const data = await response.json();
+                console.log('服务器状态:', data);
+                return data.status === 'healthy';
+            } catch (error) {
+                console.error('服务器检查失败:', error);
+                return false;
+            }
+        }
+
+        // 添加 WebSocket 连接函数
+        async function connectWebSocket(username) {
+            try {
+                const wsUrl = getWebSocketUrl(username);
+                console.log('正在连接到:', wsUrl);
+                
+                ws = new WebSocket(wsUrl);
+                
+                return new Promise((resolve, reject) => {
+                    const connectionTimeout = setTimeout(() => {
+                        if (ws.readyState !== WebSocket.OPEN) {
+                            ws.close();
+                            reject(new Error('连接超时，请检查网络连接'));
+                        }
+                    }, 5000);
+
+                    ws.onopen = () => {
+                        clearTimeout(connectionTimeout);
+                        console.log('WebSocket连接成功');
+                        setupWebSocketHandlers();
+                        resolve(ws);
+                    };
+
+                    ws.onerror = (error) => {
+                        clearTimeout(connectionTimeout);
+                        console.error('WebSocket连接错误:', error);
+                        reject(error);
+                    };
+                });
+            } catch (error) {
+                console.error('连接错误:', error);
+                throw error;
+            }
+        }
+
+        // 设置 WebSocket 事件处理器
+        function setupWebSocketHandlers() {
+            ws.onclose = async (event) => {
+                console.log('连接关闭:', event);
+                
+                let message = '连接已断开';
+                if (event.reason) {
+                    message += ': ' + event.reason;
+                }
+                
+                if (event.code === 1008) {
+                    message = '用户名已被使用';
+                    updateStatus(message, true);
+                    return;
+                } else if (event.code === 1007) {
+                    message = '用户名无效';
+                    updateStatus(message, true);
+                    return;
+                }
+                
+                updateStatus(message, true);
+                
+                // 尝试重新连接
+                if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                    reconnectAttempts++;
+                    updateStatus(`连接断开，${RECONNECT_DELAY/1000}秒后尝试第${reconnectAttempts}次重连...`);
+                    
+                    setTimeout(async () => {
+                        try {
+                            await connectWebSocket(currentUsername);
+                            reconnectAttempts = 0;
+                            updateStatus('重新连接成功！');
+                        } catch (error) {
+                            console.error('重连失败:', error);
+                            updateStatus('重连失败，请刷新页面重试', true);
+                        }
+                    }, RECONNECT_DELAY);
+                } else {
+                    updateStatus('多次重连失败，请刷新页面重试', true);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket错误:', error);
+                updateStatus('连接错误', true);
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    console.log('收到消息:', event.data);
+                    const data = JSON.parse(event.data);
+                    handleMessage(data);
+                } catch (error) {
+                    console.error('消息处理错误:', error);
+                }
+            };
+        }
+
+        // 保存用户信息到本地存储
+        function saveUserInfoToLocal() {
+            const userInfo = {
+                username: currentUsername,
+                status: document.querySelector('.status-text').textContent,
+                avatar: document.querySelector('.current-user .avatar').src
+            };
+            localStorage.setItem('userInfo', JSON.stringify(userInfo));
+        }
+
+        // 从本地存储加载用户信息
+        function loadUserInfoFromLocal() {
+            const savedInfo = localStorage.getItem('userInfo');
+            if (savedInfo) {
+                return JSON.parse(savedInfo);
+            }
+            return null;
+        }
+
+        // 修改 joinChat 函数
+        async function joinChat() {
+            const usernameInput = document.getElementById('username-input');
+            const username = usernameInput.value.trim();
+            
+            if (!username) {
+                updateStatus('请输入用户名', true);
+                return;
+            }
+
+            if (username.length > 20) {
+                updateStatus('用户名不能超过20个字符', true);
+                return;
+            }
+
+            if (!/^[\u4e00-\u9fa5_a-zA-Z0-9]+$/.test(username)) {
+                updateStatus('用户名只能包含中文、英文、数字和下划线', true);
+                return;
+            }
+
+            joinButton.disabled = true;
+            updateStatus('正在连接...');
+
+            try {
+                if (ws) {
+                    ws.close();
+                    ws = null;
+                }
+
+                await connectWebSocket(username);
+                
+                currentUsername = username;
+                
+                // 加载保存的用户信息
+                const savedInfo = localStorage.getItem(username);
+                if (savedInfo) {
+                    const userInfo = JSON.parse(savedInfo);
+                    // 恢��头像
+                    if (userInfo.avatar) {
+                        document.querySelector('.current-user .avatar').src = userInfo.avatar;
+                        document.getElementById('my-avatar').src = userInfo.avatar;
+                        document.getElementById('current-avatar').src = userInfo.avatar;
+                    }
+                    // 恢复个性签名
+                    if (userInfo.status) {
+                        document.querySelector('.status-text').textContent = userInfo.status;
+                        document.getElementById('my-status').textContent = userInfo.status;
+                    }
+                } else {
+                    // 如果是新用户，初始化用户信息
+                    const initialInfo = {
+                        username: username,
+                        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+                        status: '点击编辑个人信息'
+                    };
+                    localStorage.setItem(username, JSON.stringify(initialInfo));
+                }
+                
+                // 更新面显示
+                document.querySelector('.username').textContent = username;
+                document.getElementById('my-username').textContent = username;
+                
+                // 隐藏登录模态框，显示聊天界面
+                document.getElementById('username-modal').style.display = 'none';
+                document.getElementById('chat-container').style.display = 'flex';
+                
+                console.log('连接成功');
+                updateStatus('连接成功！');
+                
+            } catch (error) {
+                console.error('连接错误:', error);
+                updateStatus(error.message || '连接错误', true);
+                joinButton.disabled = false;
+            }
+        }
+
+        // 修改 handleMessage 函数
+        function handleMessage(data) {
+            console.log('收到消息:', data);
+            switch (data.type) {
+                case 'users':
+                    updateUserList(data.users);
+                    break;
+                case 'message':
+                    // 如果不是自己发的消息才添加到消息列表
+                    if (data.username !== currentUsername) {
+                        addMessage(data);
+                    }
+                    if (data.isPrivate) {
+                        updateChatHeader(data.from === currentUsername ? data.to : data.from);
+                    }
+                    notifyNewMessage(data);
+                    break;
+                case 'system':
+                    addSystemMessage(data);
+                    break;
+                case 'private_message':
+                    // 如果不是自己发的消息才添加到消息列表
+                    if (data.from !== currentUsername) {
+                        addMessage({
+                            ...data,
+                            username: data.from,
+                            isPrivate: true
+                        });
+                    }
+                    updateChatHeader(data.from === currentUsername ? data.to : data.from);
+                    updateRecentChats(data.from === currentUsername ? data.to : data.from);
+                    notifyNewMessage(data);
+                    break;
+                case 'recall':
+                    handleRecalledMessage(data);
+                    break;
+                case 'status_change':
+                    updateUserStatus(data.username, data.status);
+                    break;
+                case 'image':
+                    addImageMessage(data);
+                    break;
+                case 'file':
+                    addFileMessage(data);
+                    break;
+                case 'announcement':
+                    updateAnnouncement(data.content);
+                    break;
+                case 'group_settings':
+                    updateGroupSettings(data);
+                    break;
+            }
+        }
+
+        // 修改 sendMessage 函数，添加图片消息处理
+        function sendMessage() {
+            const messageInput = document.getElementById('message-input');
+            const content = messageInput.value.trim();
+            
+            if (!content) return;
+            
+            console.log('准备发送消息:', content);
+            
+            if (!ws) {
+                console.error('WebSocket未初始化');
+                showToast('连接已断开，请刷新页面重试');
+                return;
+            }
+            
+            if (ws.readyState !== WebSocket.OPEN) {
+                console.error('WebSocket未连接，状态:', ws.readyState);
+                showToast('连接已断开，正在尝试重新连接...');
+                return;
+            }
+            
+            const currentChat = document.querySelector('.chat-title span').textContent;
+            const isPrivateChat = currentChat !== '在线协作群';
+
+            // 检查是否包含图片
+            const imageMatch = content.match(/!\[.*?\]\((data:image\/[^;]+;base64,[^)]+)\)/);
+            if (imageMatch) {
+                // 发送图片消息
+                const message = {
+                    type: 'image',
+                    content: imageMatch[1],
+                    isPrivate: isPrivateChat,
+                    to: isPrivateChat ? currentChat : undefined
+                };
+                ws.send(JSON.stringify(message));
+                
+                // 本地显示图片
+                addImageMessage({
+                    username: currentUsername,
+                    content: imageMatch[1],
+                    timestamp: new Date().toLocaleTimeString()
+                });
+            } else {
+                // 发送普通文本消息
+                const message = {
+                    type: 'message',
+                    content: content,
+                    isPrivate: isPrivateChat,
+                    to: isPrivateChat ? currentChat : undefined
+                };
+                ws.send(JSON.stringify(message));
+                
+                // 本地显示消息
+                addMessage({
+                    username: currentUsername,
+                    content: content,
+                    timestamp: new Date().toLocaleTimeString(),
+                    isPrivate: isPrivateChat,
+                    to: isPrivateChat ? currentChat : undefined
+                });
+            }
+            
+            // 清���输入框
+            messageInput.value = '';
+        }
+
+        // 重新绑定事件监听器
+        document.addEventListener('DOMContentLoaded', function() {
+            const messageInput = document.getElementById('message-input');
+            const sendButton = document.querySelector('.send-btn');
+            
+            // 移除所有已存在的事件监听器
+            messageInput.replaceWith(messageInput.cloneNode(true));
+            sendButton.replaceWith(sendButton.cloneNode(true));
+            
+            // 重新获元素
+            const newMessageInput = document.getElementById('message-input');
+            const newSendButton = document.querySelector('.send-btn');
+            
+            // 添加新的事件监听器
+            newMessageInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            newSendButton.addEventListener('click', sendMessage);
+        });
+
+        // 添加消息历史存储对象
+        const messageHistory = {
+            group: [], // 群聊消息历史
+            private: {} // 私聊消息历史格式: { username: [] }
+        };
+
+        // 修改 addMessage 函数
+        function addMessage(data) {
+            console.log('添加消息:', data);
+            const messages = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${data.username === currentUsername ? 'own' : 'other'}`;
+            
+            // 添加时间戳
+            const lastMessage = messages.lastElementChild;
+            if (!lastMessage || shouldShowTimestamp(lastMessage, data.timestamp)) {
+                const timeDiv = document.createElement('div');
+                timeDiv.className = 'timestamp';
+                timeDiv.textContent = data.timestamp;
+                messages.appendChild(timeDiv);
+            }
+            
+            // 使用 marked 解析 Markdown，用 DOMPurify 清理 HTML
+            const parsedContent = marked.parse(data.content);
+            const sanitizedContent = DOMPurify.sanitize(parsedContent);
+            
+            // 构建消息内容
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${data.username}" 
+                         alt="${data.username}" class="message-avatar">
+                    <span class="username">${data.username === currentUsername ? '' : data.username}</span>
+                </div>
+                <div class="message-content markdown-body">
+                    ${sanitizedContent}
+                </div>
+            `;
+            
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+            
+            // 保存消息到历史记录
+            const currentChat = document.querySelector('.chat-title span').textContent;
+            if (currentChat === '在线协作群') {
+                messageHistory.group.push(data);
+            } else {
+                if (!messageHistory.private[currentChat]) {
+                    messageHistory.private[currentChat] = [];
+                }
+                messageHistory.private[currentChat].push(data);
+            }
+        }
+
+        // 修改 backToGroupChat 函数
+        function backToGroupChat() {
+            // 移除私聊样式
+            const chatArea = document.querySelector('.chat-area');
+            chatArea.classList.remove('private-chat');
+            chatArea.style.width = ''; // 恢复默认宽度
+            
+            // 显示右侧群聊信息面板
+            document.querySelector('.info-panel').style.display = '';
+            
+            updateChatHeader('在线协作群');
+            
+            // 清空并恢复群聊消息
+            document.getElementById('messages').innerHTML = '';
+            messageHistory.group.forEach(msg => {
+                addMessage(msg);
+            });
+        }
+
+        // 修改 updateChatHeader 函数
+        function updateChatHeader(targetName) {
+            const chatTitle = document.querySelector('.chat-title span');
+            chatTitle.textContent = targetName;
+        }
+
+        // 修改 updateMyInfo 函数
+        function updateMyInfo() {
+            if (currentUsername) {
+                const myAvatar = document.getElementById('my-avatar');
+                const sidebarAvatar = document.querySelector('.current-user .avatar');
+                const myUsername = document.getElementById('my-username');
+                const myStatus = document.getElementById('my-status');
+                const sidebarUsername = document.querySelector('.current-user .user-info .username');
+                const sidebarStatus = document.querySelector('.current-user .user-info .status-text');
+                
+                const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUsername}`;
+                myAvatar.src = avatarUrl;
+                sidebarAvatar.src = avatarUrl;
+                myAvatar.alt = currentUsername;
+                sidebarAvatar.alt = currentUsername;
+                
+                myUsername.textContent = currentUsername;
+                sidebarUsername.textContent = currentUsername;
+                
+                const status = localStorage.getItem('userStatus') || '点击编辑个人信息';
+                myStatus.textContent = status;
+                sidebarStatus.textContent = status;
+            }
+        }
+
+        // 修改 updateUserList 函数
+        function updateUserList(users) {
+            const userList = document.getElementById('users');
+            const filteredUsers = users.filter(user => user !== currentUsername);
+            
+            // 生成用户列表HTML
+            userList.innerHTML = filteredUsers.map(user => {
+                const userStatus = localStorage.getItem(`userStatus_${user}`) || '';
+                return `
+                    <li class="member-item" onclick="startPrivateChat('${user}')">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${user}" alt="${user}" class="member-avatar">
+                        <div class="member-info">
+                            <span class="member-name">${user}</span>
+                            <div class="member-details">
+                                <span class="member-status">${userStatus || '在线'}</span>
+                                <span class="online-time">刚刚活跃</span>
+                            </div>
+                        </div>
+                    </li>
+                `;
+            }).join('');
+            
+            // 更新成员数量
+            updateMemberCount(users);
+            
+            // 更新当前用户显示
+            updateMyInfo();
+            
+            // 更新最近聊天列表
+            updateRecentChats();
+        }
+
+        // 修改 startPrivateChat 函数
+        function startPrivateChat(username) {
+            if (username === currentUsername) return;
+            
+            // 更新聊天标题
+            updateChatHeader(username);
+            
+            // 切换到聊天标签页
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(t => t.classList.remove('active'));
+            document.querySelector('.tab-btn[onclick="switchTab(\'chats\')"]').classList.add('active');
+            
+            // 显示聊天区域
+            document.getElementById('chats-tab').style.display = 'block';
+            document.getElementById('contacts-tab').style.display = 'none';
+            
+            // 添加私聊样式
+            const chatArea = document.querySelector('.chat-area');
+            chatArea.classList.add('private-chat');
+            
+            // 隐藏右侧群聊信息面板
+            document.querySelector('.info-panel').style.display = 'none';
+            // 调整聊天区域宽度
+            chatArea.style.width = 'calc(100% - 300px)';
+            
+            // 清空消息列表
+            document.getElementById('messages').innerHTML = '';
+            
+            // 恢复历史消息
+            if (messageHistory.private[username]) {
+                messageHistory.private[username].forEach(msg => {
+                    addMessage(msg);
+                });
+            } else {
+                // 如果没有历史消息，显示系统提示
+                addSystemMessage({
+                    content: `开始与 ${username} 的私聊`
+                });
+            }
+
+            // 如果是小助手，发送一个初始消��到端
+            if (username === '小助手' && (!messageHistory.private[username] || messageHistory.private[username].length === 0)) {
+                const message = {
+                    type: 'message',
+                    content: '你好',
+                    isPrivate: true,
+                    to: username
+                };
+                
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify(message));
+                }
+            }
+            
+            // 更新最近聊天列表
+            updateRecentChats(username);
+        }
+
+        function addSystemMessage(data) {
+            const messages = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message system';
+            messageDiv.innerHTML = `
+                <div class="message-content">${data.content}</div>
+            `;
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function shouldShowTimestamp(lastMessage, newTimestamp) {
+            // 如果最后一条消息是系统消息，总是显示时间戳
+            if (lastMessage.classList.contains('system')) {
+                return true;
+            }
+            
+            // ���最后一条消息的时间戳
+            const lastTimestamp = lastMessage.querySelector('.timestamp')?.textContent;
+            if (!lastTimestamp) {
+                return true;
+            }
+            
+            // 如果时间间隔超过5钟，显示新的时间戳
+            const lastTime = parseTime(lastTimestamp);
+            const newTime = parseTime(newTimestamp);
+            return (newTime - lastTime) > 5 * 60 * 1000;
+        }
+
+        function parseTime(timeStr) {
+            const [hours, minutes, seconds] = timeStr.split(':').map(Number);
+            const now = new Date();
+            now.setHours(hours, minutes, seconds);
+            return now.getTime();
+        }
+
+        // 修改消息输入框的回车键处理
+        document.getElementById('message-input').addEventListener('keydown', (e) => {
+            // 如果 @ 面板显示中，Enter 键用于选择用户
+            const mentionPanel = document.querySelector('.mention-panel');
+            if (mentionPanel && mentionPanel.style.display !== 'none') {
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                    e.preventDefault();
+                    e.stopPropagation();  // 阻止事件冒泡
+                    const selectedItem = mentionPanel.querySelector('.mention-item.selected');
+                    if (selectedItem) {
+                        insertMention(selectedItem.dataset.username);
+                    }
+                    return false;  // 阻止默认行为
+                }
+            } else if (e.key === 'Enter' && !e.shiftKey) {
+                // 只有在 @ 面板不显示时，才发送消息
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // 页面加载完成后自动聚焦用户名输入框
+        window.onload = async () => {
+            document.getElementById('username-input').focus();
+            
+            try {
+                const isHealthy = await checkServerHealth();
+                if (isHealthy) {
+                    updateStatus('服务器已就绪，请入用户名并点击加入聊天');
+                } else {
+                    updateStatus('服务器未就绪，请稍后试', true);
+                }
+            } catch (error) {
+                updateStatus('无法连服务器请检查网络连接', true);
+            }
+
+            // 初化 @ 提醒功能
+            setupMentionFeature();
+        };
+
+        // 添加更新在线人数的函数
+        function updateMemberCount(users) {
+            const filteredUsers = users.filter(user => user !== '小助手');
+            const total = filteredUsers.length;
+            const online = filteredUsers.length; // 目前在线人数等于总人数
+            
+            // 更新群信息中的成员数
+            document.querySelector('.member-count .count').textContent = `${total}`;
+            // 更新群聊标题中的在线人数
+            document.querySelector('.online-count').textContent = `(${online}/${total})`;
+            
+            // 更新在线成员头像网格
+            updateMemberGrid(filteredUsers);
+        }
+
+        // 添加 updateMemberGrid 函数
+        function updateMemberGrid(users) {
+            const grid = document.getElementById('online-members-grid');
+            grid.innerHTML = users.map(user => {
+                // 从localStorage获取用户信息
+                let avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user}`;
+                const savedInfo = localStorage.getItem(user);
+                if (savedInfo) {
+                    const userInfo = JSON.parse(savedInfo);
+                    if (userInfo.avatar) {
+                        avatarUrl = userInfo.avatar;
+                    }
+                }
+                
+                return `
+                    <div class="member-item" onclick="startPrivateChat('${user}')">
+                        <img src="${avatarUrl}" alt="${user}" class="member-avatar">
+                        <span class="member-name">${user}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 移除表情按钮的alert事件监听
+        document.querySelector('.bi-emoji-smile').parentElement.removeEventListener('click', () => {
+            alert('表情功能开发中...');
+        });
+
+        // 修改表情选择器功能
+        const emojiData = {
+            smileys: ['😀', '😂', '😄', '😁', '😅', '����', '����', '😇', '🙂', '😉', '😌', '😍', '🥰', ''],
+            animals: ['🐶', '🐱', '🐰', '🐹', '🐰', '', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵'],
+            food: ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝'],
+            activities: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏'],
+            objects: ['', '💻', '⌚', '📷', '', '📹', '🎥', '📽', '🎞', '', '☎️', '📟', '📠', '📺', '📻']
+        };
+
+        let recentEmojis = JSON.parse(localStorage.getItem('recentEmojis') || '[]');
+
+        function toggleEmojiPicker() {
+            const picker = document.getElementById('emoji-picker');
+            const messageInput = document.querySelector('.message-input');
+            
+            if (picker.style.display === 'none') {
+                // 显示表情选择器
+                picker.style.display = 'block';
+                
+                // 定位表情选择器
+                const inputRect = messageInput.getBoundingClientRect();
+                picker.style.position = 'absolute';
+                picker.style.bottom = (window.innerHeight - inputRect.top + 10) + 'px';
+                picker.style.left = inputRect.left + 'px';
+                
+                // 默认显示最使用的表情
+                updateEmojiList('recent');
+                
+                // 添加点击外部关闭功能
+                document.addEventListener('click', closeEmojiPickerOnClickOutside);
+            } else {
+                closeEmojiPicker();
+            }
+        }
+
+        function closeEmojiPicker() {
+            const picker = document.getElementById('emoji-picker');
+            picker.style.display = 'none';
+            document.removeEventListener('click', closeEmojiPickerOnClickOutside);
+        }
+
+        function closeEmojiPickerOnClickOutside(event) {
+            const picker = document.getElementById('emoji-picker');
+            const emojiButton = document.querySelector('.bi-emoji-smile').parentElement;
+            
+            if (!picker.contains(event.target) && !emojiButton.contains(event.target)) {
+                closeEmojiPicker();
+            }
+        }
+
+        function switchEmojiCategory(category) {
+            // 更新分类按状态
+            document.querySelectorAll('.emoji-categories button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 更新表情列表
+            updateEmojiList(category);
+        }
+
+        function updateEmojiList(category) {
+            const list = document.getElementById('emoji-list');
+            const emojis = category === 'recent' ? recentEmojis : emojiData[category];
+            
+            list.innerHTML = emojis.map(emoji => `
+                <button class="emoji-btn" onclick="insertEmoji('${emoji}')">${emoji}</button>
+            `).join('');
+        }
+
+        function insertEmoji(emoji) {
+            const messageInput = document.getElementById('message-input');
+            const cursorPos = messageInput.selectionStart;
+            const text = messageInput.value;
+            
+            // 在光标位置插入表情
+            messageInput.value = text.slice(0, cursorPos) + emoji + text.slice(cursorPos);
+            
+            // 更新光标位置
+            const newCursorPos = cursorPos + emoji.length;
+            messageInput.setSelectionRange(newCursorPos, newCursorPos);
+            
+            // 更新最近使用的表情
+            recentEmojis = [emoji, ...recentEmojis.filter(e => e !== emoji)].slice(0, 15);
+            localStorage.setItem('recentEmojis', JSON.stringify(recentEmojis));
+            
+            // 如果当前显示的是最近使用的表情，更新列表
+            if (document.querySelector('.emoji-categories button.active').textContent === '最近') {
+                updateEmojiList('recent');
+            }
+            
+            // 聚焦输入框
+            messageInput.focus();
+        }
+
+        // 图片上传功能
+        function openImageUpload() {
+            document.getElementById('image-upload').click();
+        }
+
+        async function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            try {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const imageData = e.target.result;
+                    // 在输入框中插入图片的 Markdown 语法
+                    const messageInput = document.getElementById('message-input');
+                    const cursorPosition = messageInput.selectionStart;
+                    const text = messageInput.value;
+                    const imageMarkdown = `![${file.name}](${imageData})`;
+                    
+                    messageInput.value = text.slice(0, cursorPosition) + imageMarkdown + text.slice(cursorPosition);
+                    
+                    // 更新光标位置
+                    const newPosition = cursorPosition + imageMarkdown.length;
+                    messageInput.setSelectionRange(newPosition, newPosition);
+                    messageInput.focus();
+                };
+                reader.readAsDataURL(file);
+            } catch (error) {
+                console.error('图片上传失败:', error);
+                showToast('图片上传失败');
+            }
+        }
+
+        // 文件上传功能
+        function openFileUpload() {
+            document.getElementById('file-upload').click();
+        }
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                // 发送文件消息
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'file',
+                        filename: file.name,
+                        size: file.size,
+                        contentType: file.type
+                    }));
+                }
+            } catch (error) {
+                console.error('文件上传失败:', error);
+                showToast('文件上传失败');
+            }
+        }
+
+        // 消息搜索功能
+        function openMessageSearch() {
+            document.getElementById('message-search-panel').style.display = 'block';
+            document.getElementById('message-search-input').focus();
+        }
+
+        function closeMessageSearch() {
+            document.getElementById('message-search-panel').style.display = 'none';
+        }
+
+        function searchMessages() {
+            const searchInput = document.getElementById('message-search-input');
+            const searchTerm = searchInput.value.toLowerCase();
+            const messages = document.querySelectorAll('.message:not(.system)');
+            const results = [];
+            
+            messages.forEach(message => {
+                const content = message.querySelector('.message-content').textContent.toLowerCase();
+                if (content.includes(searchTerm)) {
+                    results.push({
+                        content: message.querySelector('.message-content').textContent,
+                        username: message.querySelector('.username').textContent || currentUsername,
+                        timestamp: message.previousElementSibling?.classList.contains('timestamp') 
+                            ? message.previousElementSibling.textContent 
+                            : '未知时间'
+                    });
+                }
+            });
+            
+            displaySearchResults(results);
+        }
+
+        function displaySearchResults(results) {
+            const resultsContainer = document.getElementById('message-search-results');
+            resultsContainer.innerHTML = results.map(result => `
+                <div class="search-result">
+                    <div class="result-header">
+                        <span class="result-username">${result.username}</span>
+                        <span class="result-time">${result.timestamp}</span>
+                    </div>
+                    <div class="result-content">${result.content}</div>
+                </div>
+            `).join('') || '<div class="no-results">没有找到相关消息</div>';
+        }
+
+        // 群公告编辑功能
+        function openAnnouncementEditor() {
+            const currentAnnouncement = document.querySelector('.announcement-content').textContent;
+            document.getElementById('announcement-text').value = currentAnnouncement;
+            document.getElementById('announcement-editor').style.display = 'flex';
+        }
+
+        function closeAnnouncementEditor() {
+            document.getElementById('announcement-editor').style.display = 'none';
+        }
+
+        function saveAnnouncement() {
+            const newAnnouncement = document.getElementById('announcement-text').value.trim();
+            if (!newAnnouncement) {
+                showToast('公告容不能为空');
+                return;
+            }
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'announcement',
+                    content: newAnnouncement
+                }));
+                closeAnnouncementEditor();
+            }
+        }
+
+        // 添加图片消息
+        function addImageMessage(data) {
+            const messages = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${data.username === currentUsername ? 'own' : 'other'}`;
+            
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${data.username}" 
+                         alt="${data.username}" class="message-avatar">
+                    <span class="username">${data.username === currentUsername ? '' : data.username}</span>
+                </div>
+                <div class="message-content image-content">
+                    <img src="${data.content}" alt="图片消息" onclick="previewImage('${data.content}')">
+                </div>
+            `;
+            
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        // 添加文件消息
+        function addFileMessage(data) {
+            const messages = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${data.username === currentUsername ? 'own' : 'other'}`;
+            
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${data.username}" 
+                         alt="${data.username}" class="message-avatar">
+                    <span class="username">${data.username === currentUsername ? '' : data.username}</span>
+                </div>
+                <div class="message-content file-content">
+                    <i class="bi bi-file-earmark"></i>
+                    <div class="file-info">
+                        <span class="file-name">${data.filename}</span>
+                        <span class="file-size">${formatFileSize(data.size)}</span>
+                    </div>
+                    <button onclick="downloadFile('${data.url}')" class="download-btn">
+                        <i class="bi bi-download"></i>
+                    </button>
+                </div>
+            `;
+            
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        // 更新群公告
+        function updateAnnouncement(content) {
+            document.querySelector('.announcement-content').textContent = content;
+            showToast('公告已更新');
+        }
+
+        // 工具函数
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+        }
+
+        function previewImage(url) {
+            const modal = document.createElement('div');
+            modal.className = 'image-preview-modal';
+            modal.innerHTML = `
+                <div class="preview-content">
+                    <img src="${url}" alt="预览图片">
+                    <button class="close-preview" onclick="this.parentElement.parentElement.remove()">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // 添加 @ 提醒功能
+        function setupMentionFeature() {
+            const messageInput = document.getElementById('message-input');
+            const mentionPanel = document.createElement('div');
+            mentionPanel.className = 'mention-panel';
+            mentionPanel.style.display = 'none';
+            document.querySelector('.message-input-container').appendChild(mentionPanel);
+
+            let mentionStart = -1;
+            let mentionText = '';
+
+            messageInput.addEventListener('input', (e) => {
+                const text = e.target.value;
+                const caretPos = e.target.selectionStart;
+                
+                // 检查是否正在输入 @
+                if (text[caretPos - 1] === '@') {
+                    mentionStart = caretPos - 1;
+                    mentionText = '';
+                    showMentionPanel('');
+                } else if (mentionStart !== -1 && caretPos > mentionStart) {
+                    // 更新搜索文本
+                    mentionText = text.substring(mentionStart + 1, caretPos);
+                    showMentionPanel(mentionText);
+                } else {
+                    mentionStart = -1;
+                    mentionPanel.style.display = 'none';
+                }
+            });
+
+            function handleMentionKeydown(e) {
+                if (mentionPanel.style.display === 'none') return;
+                
+                const selectedItem = mentionPanel.querySelector('.mention-item.selected');
+                
+                switch (e.key) {
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        e.stopPropagation();
+                        selectPrevMention();
+                        break;
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        e.stopPropagation();
+                        selectNextMention();
+                        break;
+                    case 'Enter':
+                    case 'Tab':
+                        if (selectedItem) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            insertMention(selectedItem.dataset.username);
+                            return false;
+                        }
+                        break;
+                    case 'Escape':
+                        e.preventDefault();
+                        e.stopPropagation();
+                        mentionPanel.style.display = 'none';
+                        mentionStart = -1;
+                        break;
+                }
+            }
+
+            // 移除之前的事件监听器
+            messageInput.removeEventListener('keydown', handleMentionKeydown);
+            // 添加新的事件监听器并确保它在其他 keydown 事件之前触发
+            messageInput.addEventListener('keydown', handleMentionKeydown, true);
+
+            function showMentionPanel(searchText) {
+                const users = Array.from(document.querySelectorAll('#users .member-name'))
+                    .map(el => el.textContent)
+                    .filter(name => name.toLowerCase().includes(searchText.toLowerCase()));
+                
+                // 如果小助手不在列表中才添加
+                if (!users.includes('小助手')) {
+                    users.unshift('小助手');
+                }
+                
+                if (users.length === 0) {
+                    mentionPanel.style.display = 'none';
+                    return;
+                }
+
+                mentionPanel.innerHTML = users.map((user, index) => `
+                    <div class="mention-item ${index === 0 ? 'selected' : ''}" data-username="${user}">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${user}" 
+                             alt="${user}" class="mention-avatar">
+                        <span>${user}</span>
+                    </div>
+                `).join('');
+
+                // 定位面板
+                const inputRect = messageInput.getBoundingClientRect();
+                const caretCoords = getCaretCoordinates(messageInput, mentionStart);
+                
+                mentionPanel.style.display = 'block';
+                mentionPanel.style.position = 'absolute';
+                
+                // 计算面板位置
+                const panelLeft = inputRect.left + 12; // 添加一些左边距
+                const panelTop = inputRect.top - mentionPanel.offsetHeight - 5; // 在输入框上方显示，添加一些间距
+                
+                // 确保面板不会超出视口
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                
+                // 调整水平位置
+                if (panelLeft + mentionPanel.offsetWidth > viewportWidth) {
+                    mentionPanel.style.left = (viewportWidth - mentionPanel.offsetWidth - 10) + 'px';
+                } else {
+                    mentionPanel.style.left = panelLeft + 'px';
+                }
+                
+                // 调整垂直位置
+                if (panelTop < 0) {
+                    // 如果上方空间不够，就显示在输入框下
+                    mentionPanel.style.top = (inputRect.bottom + 5) + 'px';
+                } else {
+                    mentionPanel.style.top = panelTop + 'px';
+                }
+
+                // 添加点击事件
+                mentionPanel.querySelectorAll('.mention-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        insertMention(item.dataset.username);
+                    });
+                    
+                    item.addEventListener('mouseover', () => {
+                        mentionPanel.querySelectorAll('.mention-item').forEach(i => i.classList.remove('selected'));
+                        item.classList.add('selected');
+                    });
+                });
+            }
+
+            function selectNextMention() {
+                const items = mentionPanel.querySelectorAll('.mention-item');
+                const selectedIndex = Array.from(items).findIndex(item => item.classList.contains('selected'));
+                items[selectedIndex]?.classList.remove('selected');
+                items[(selectedIndex + 1) % items.length]?.classList.add('selected');
+            }
+
+            function selectPrevMention() {
+                const items = mentionPanel.querySelectorAll('.mention-item');
+                const selectedIndex = Array.from(items).findIndex(item => item.classList.contains('selected'));
+                items[selectedIndex]?.classList.remove('selected');
+                const newIndex = selectedIndex <= 0 ? items.length - 1 : selectedIndex - 1;
+                items[newIndex]?.classList.add('selected');
+            }
+
+            function insertMention(username) {
+                const text = messageInput.value;
+                const newText = text.substring(0, mentionStart) + '@' + username + ' ' + text.substring(messageInput.selectionStart);
+                messageInput.value = newText;
+                messageInput.focus();
+                const cursorPos = mentionStart + username.length + 2;
+                messageInput.setSelectionRange(cursorPos, cursorPos);
+                mentionPanel.style.display = 'none';
+                mentionStart = -1;
+            }
+        }
+
+        // 添加获取光标位置的辅助函数
+        function getCaretCoordinates(element, position) {
+            const div = document.createElement('div');
+            const style = getComputedStyle(element);
+            const properties = [
+                'fontFamily', 'fontSize', 'fontWeight', 'fontStyle',
+                'letterSpacing', 'textTransform', 'wordSpacing', 'textIndent',
+                'whiteSpace', 'wordBreak', 'wordWrap', 'lineHeight',
+                'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+                'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth'
+            ];
+
+            properties.forEach(prop => {
+                div.style[prop] = style[prop];
+            });
+
+            div.textContent = element.value.substring(0, position);
+            div.style.position = 'absolute';
+            div.style.visibility = 'hidden';
+            div.style.whiteSpace = 'pre-wrap';
+            div.style.width = element.offsetWidth + 'px';
+            
+            document.body.appendChild(div);
+            const coordinates = {
+                left: div.offsetWidth,
+                top: div.offsetHeight
+            };
+            document.body.removeChild(div);
+            
+            return coordinates;
+        }
+
+        // 监听用户名输入框的回车键
+        document.getElementById('username-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                joinChat();
+            }
+        });
+
+        // 群设置相关函数
+        function openGroupSettingsEditor() {
+            const modal = document.getElementById('group-settings-editor');
+            const nameInput = document.getElementById('group-name-input');
+            nameInput.value = document.getElementById('group-name').textContent;
+            modal.style.display = 'flex';
+        }
+
+        function closeGroupSettingsEditor() {
+            document.getElementById('group-settings-editor').style.display = 'none';
+        }
+
+        function saveGroupSettings() {
+            const newName = document.getElementById('group-name-input').value.trim();
+            
+            if (!newName) {
+                showToast('群名称不能为空');
+                return;
+            }
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'group_settings',
+                    name: newName
+                }));
+                
+                // 更新界面显示
+                document.getElementById('group-name').textContent = newName;
+                document.querySelector('#groups .member-name').textContent = newName;
+                document.querySelector('.chat-title span').textContent = newName;
+                
+                closeGroupSettingsEditor();
+                showToast('群设置已更新');
+            }
+        }
+
+        // 修改成员数量显示
+        function updateMemberCount(users) {
+            const filteredUsers = users.filter(user => user !== '小助手');
+            const total = filteredUsers.length;
+            const online = filteredUsers.length; // 目前在线人数等于总人数
+            
+            // 更新群信息中的成员数
+            document.querySelector('.member-count .count').textContent = `${total}`;
+            // 更新群聊标题中的在线人数
+            document.querySelector('.online-count').textContent = `(${online}/${total})`;
+            
+            // 更新在线成员头像网格
+            updateMemberGrid(filteredUsers);
+        }
+
+        // 修改 updateUserList 函数
+        function updateUserList(users) {
+            const userList = document.getElementById('users');
+            const filteredUsers = users.filter(user => user !== currentUsername);
+            
+            // 生成用户列表HTML
+            userList.innerHTML = filteredUsers.map(user => {
+                const userStatus = localStorage.getItem(`userStatus_${user}`) || '';
+                return `
+                    <li class="member-item" onclick="startPrivateChat('${user}')">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${user}" alt="${user}" class="member-avatar">
+                        <div class="member-info">
+                            <span class="member-name">${user}</span>
+                            <div class="member-details">
+                                <span class="member-status">${userStatus || '在线'}</span>
+                                <span class="online-time">刚刚活跃</span>
+                            </div>
+                        </div>
+                    </li>
+                `;
+            }).join('');
+            
+            // 更新成员数量
+            updateMemberCount(users);
+            
+            // 更新当前用户显示
+            updateMyInfo();
+            
+            // 更新最近聊天列表
+            updateRecentChats();
+        }
+
+        // 添加群设置更新处理函数
+        function updateGroupSettings(data) {
+            if (data.name) {
+                document.getElementById('group-name').textContent = data.name;
+                document.querySelector('#groups .member-name').textContent = data.name;
+                document.querySelector('.chat-title span').textContent = data.name;
+                showToast('群设置已更新');
+            }
+        }
+
+        // 修改 switchTab 函数
+        function switchTab(tab) {
+            const tabs = document.querySelectorAll('.tab-btn');
+            const chatsTab = document.getElementById('chats-tab');
+            const contactsTab = document.getElementById('contacts-tab');
+            
+            // 更新标签按钮状态
+            tabs.forEach(t => t.classList.remove('active'));
+            document.querySelector(`.tab-btn[onclick*="${tab}"]`).classList.add('active');
+            
+            // 切换容区域
+            if (tab === 'chats') {
+                chatsTab.style.display = 'flex';
+                contactsTab.style.display = 'none';
+                updateRecentChats();
+            } else if (tab === 'contacts') {
+                chatsTab.style.display = 'none';
+                contactsTab.style.display = 'flex';
+                updateMyInfo();
+            }
+        }
+
+        // 修改 updateRecentChats 函数
+        function updateRecentChats(newChat = null) {
+            const recentChats = document.getElementById('recent-chats');
+            let recentList = JSON.parse(localStorage.getItem('recentChats') || '[]');
+            
+            // 如果有新的聊天，添加到列表开头
+            if (newChat && !recentList.includes(newChat)) {
+                recentList.unshift(newChat);
+                recentList = recentList.slice(0, 5); // 保留最近5个
+                localStorage.setItem('recentChats', JSON.stringify(recentList));
+            }
+            
+            recentChats.innerHTML = recentList.map(username => `
+                <li class="member-item" onclick="startPrivateChat('${username}')">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${username}" alt="${username}" class="member-avatar">
+                    <div class="member-info">
+                        <span class="member-name">${username}</span>
+                        <div class="member-details">
+                            <span class="member-status">点击续聊天</span>
+                            <span class="online-time">在线</span>
+                        </div>
+                    </div>
+                </li>
+            `).join('');
+        }
+
+        // 初始化 Markdown 设置
+        marked.setOptions({
+            highlight: function(code, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    try {
+                        return hljs.highlight(code, { language: lang }).value;
+                    } catch (err) {}
+                }
+                return hljs.highlightAuto(code).value;
+            },
+            breaks: true,
+            gfm: true
+        });
+
+        // 插入 Markdown 语法
+        function insertMarkdown(prefix, suffix, isImage = false) {
+            const input = document.getElementById('message-input');
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            const text = input.value;
+            const selection = text.substring(start, end);
+            
+            let insertion = '';
+            if (isImage) {
+                insertion = '![图片描述](图片URL)';
+            } else {
+                insertion = prefix + selection + suffix;
+            }
+            
+            input.value = text.substring(0, start) + insertion + text.substring(end);
+            input.focus();
+            
+            // 设置光标位置
+            if (selection) {
+                input.setSelectionRange(start + prefix.length, start + prefix.length + selection.length);
+            } else {
+                input.setSelectionRange(start + prefix.length, start + insertion.length - suffix.length);
+            }
+        }
+
+        // 添加新的函数
+        function openMentionPanel() {
+            const messageInput = document.getElementById('message-input');
+            const cursorPosition = messageInput.selectionStart;
+            
+            // 在光标位置插入 @ 符号
+            const text = messageInput.value;
+            messageInput.value = text.slice(0, cursorPosition) + '@' + text.slice(cursorPosition);
+            
+            // 设置光标位置
+            messageInput.selectionStart = cursorPosition + 1;
+            messageInput.selectionEnd = cursorPosition + 1;
+            
+            // 触发 @ 面板
+            messageInput.dispatchEvent(new InputEvent('input'));
+            messageInput.focus();
+        }
+
+        function insertNewline() {
+            const messageInput = document.getElementById('message-input');
+            const cursorPosition = messageInput.selectionStart;
+            const text = messageInput.value;
+            
+            // 在光标位���插入换行符
+            messageInput.value = text.slice(0, cursorPosition) + '\n' + text.slice(cursorPosition);
+            
+            // 设置光标位置
+            messageInput.selectionStart = cursorPosition + 1;
+            messageInput.selectionEnd = cursorPosition + 1;
+            messageInput.focus();
+        }
+
+        // 添加语音消息功能
+        function startVoiceMessage() {
+            alert('语音功能开发中...');
+        }
+
+        // 在页面加载完成后初始化 highlight.js
+        document.addEventListener('DOMContentLoaded', (event) => {
+            document.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightBlock(block);
+            });
+        });
+
+        // 在添加新消息后也要高亮代码块
+        const originalAddMessage = addMessage;
+        addMessage = function(data) {
+            originalAddMessage(data);
+            document.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightBlock(block);
+            });
+        };
+
+        // 添加保存个人信息的函数
+        function saveProfile() {
+            const newUsername = document.getElementById('profile-username').value.trim();
+            const newStatus = document.getElementById('profile-status').value.trim();
+            const newAvatar = document.getElementById('current-avatar').src;
+            
+            // 更新个性签名（同时更新顶部和左侧的状态文本）
+            if (newStatus) {
+                // 更新左侧联系人列表中的状态
+                document.getElementById('my-status').textContent = newStatus;
+                // 更新顶部的状态文本
+                document.querySelector('.status-text').textContent = newStatus;
+            }
+            
+            // 更新头像
+            document.querySelector('.current-user .avatar').src = newAvatar;
+            document.getElementById('my-avatar').src = newAvatar;
+            
+            // 更新用户名（如果有修改）
+            if (newUsername && newUsername !== currentUsername) {
+                // 这里可以添加修改用户名的逻辑
+                console.log('用户名修改功能暂未实现');
+            }
+            
+            // 保存到本地存储
+            const userInfo = {
+                username: currentUsername,
+                avatar: newAvatar,
+                status: newStatus || document.querySelector('.status-text').textContent
+            };
+            localStorage.setItem(currentUsername, JSON.stringify(userInfo));
+            
+            // 关闭模态框
+            closeProfileModal();
+            
+            // 显示保存成功提示
+            showToast('个人信息已更新');
+        }
+
+        // 打开个人信息编辑模态框
+        function openProfileModal() {
+            const modal = document.getElementById('profile-modal');
+            const usernameInput = document.getElementById('profile-username');
+            const statusInput = document.getElementById('profile-status');
+            
+            // 填充当前信息
+            usernameInput.value = currentUsername;
+            // 从左侧联系人列表获取当前状态文本
+            const currentStatus = document.getElementById('my-status').textContent;
+            statusInput.value = currentStatus === '点击编辑个人信息' ? '' : currentStatus;
+            
+            modal.style.display = 'flex';
+        }
+
+        // 关闭个人信息编辑模态框
+        function closeProfileModal() {
+            document.getElementById('profile-modal').style.display = 'none';
+        }
+
+        // 显示提示消息
+        function showToast(message) {
+            // 移除现有的提示消息
+            const existingToast = document.querySelector('.toast');
+            if (existingToast) {
+                existingToast.remove();
+            }
+            
+            // 创建新的提示消息
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // 2秒后自动移除
+            setTimeout(() => {
+                toast.remove();
+            }, 2000);
+        }
+
+        // 添加更换头像的函数
+        function changeAvatar() {
+            // 生成一个随机种子
+            const randomSeed = Math.random().toString(36).substring(7);
+            const newAvatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${randomSeed}`;
+            
+            // 更新个人信息模态框中的头像
+            document.getElementById('current-avatar').src = newAvatarUrl;
+            
+            // 更新顶部的头像
+            document.querySelector('.current-user .avatar').src = newAvatarUrl;
+            
+            // 更新左侧联系人列表中的头像
+            document.getElementById('my-avatar').src = newAvatarUrl;
+            
+            // 保存到本地存储
+            const userInfo = {
+                username: currentUsername,
+                avatar: newAvatarUrl,
+                status: document.querySelector('.status-text').textContent
+            };
+            localStorage.setItem(currentUsername, JSON.stringify(userInfo));
+            
+            // 通知后端更新了头像
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'avatar_update',
+                    username: currentUsername,
+                    avatar: newAvatarUrl
+                }));
+            }
+            
+            // 更新群聊在线成员列表
+            const grid = document.getElementById('online-members-grid');
+            const memberItems = grid.querySelectorAll('.member-item');
+            memberItems.forEach(item => {
+                const username = item.querySelector('.member-name').textContent;
+                if (username === currentUsername) {
+                    item.querySelector('.member-avatar').src = newAvatarUrl;
+                }
+            });
+            
+            // 显示提示消息
+            showToast('头像已更新');
+        }
+    </script>
+</body>
+</html>
